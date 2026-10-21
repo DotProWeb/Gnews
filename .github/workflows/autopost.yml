@@ -50,6 +50,9 @@ jobs:
         run: |
           git config --global user.name "GhatailBot"
           git config --global user.email "bot@ghatail.com"
-          git add posted_cache.json social-autopost/posted_cache.json 2>/dev/null || true
+          git add posted_cache.json
+          if [ -f "social-autopost/posted_cache.json" ]; then
+            git add social-autopost/posted_cache.json
+          fi
           git commit -m "Update social auto-post cache [skip ci]" || echo "No changes to commit"
           git push
