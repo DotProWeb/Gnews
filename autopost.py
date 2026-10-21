@@ -50,7 +50,7 @@ if not os.path.exists(DEFAULT_AD_PATH):
 FB_PAGE_ID = os.getenv("FB_PAGE_ID", "399463566750054")
 FB_PAGE_ACCESS_TOKEN = os.getenv(
     "FB_PAGE_ACCESS_TOKEN",
-    "EAAWmZCyxD13YBS77rsxkXFWnbo1D22ifPTPJXyb7JZBG9EZBpR9qXrh0Jk925Y0RMkfqqXRyFKHsvlZAmA84BexT5tTacT3EmQqGZBhXhKMM0PyZC0c52j4cweOAf5hzTBODmEQeayQ0MGqeCQ8LKPu7AZCY3ZAA55G30R5cGH6zUjEEQUMXYJaXZCJbIKvjDD21C8JWw1xeTHk5fnn4UvIFHc5YCFyb2hYfcJnrSuZCgD8t3V5SNs0ZCqZA4s4ApFoZD"
+    "EAAWmZCyxD13YBS3teAB4hC4sR9db3oeFxiHno7dAqJLnhPD9b62JUvVyuKvWZAiPF1aGURkHcuOWo8OLjDWe4oLZBEqQgF3cGm00RhK31TPyCMNKxDKm2IQQ1Tgl2rVH4ZCXJkCD0nfoD24UWDd5sBvZBwY2ktsTMRycq6vJTXlo61gqitlHzHS32121krZBrZATZB7hC8ZB0er3riQIp4rHvyySR"
 )
 
 # ৩. টেলিগ্রাম চ্যানেল ক্রেডেনশিয়াল (Optional)
@@ -60,10 +60,10 @@ TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID", "")
 # ৪. এক্স/টুইটার API ক্রেডেনশিয়াল (Optional)
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
 
-# ৫. হোয়াটসঅ্যাপ চ্যানেল ক্রেডেনশিয়াল (Optional)
-WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "https://gate.whapi.cloud/messages/text")
-WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "")
-WHATSAPP_CHANNEL_JID = os.getenv("WHATSAPP_CHANNEL_JID", "")
+# ৫. হোয়াটসঅ্যাপ চ্যানেল ক্রেডেনশিয়াল (Whapi.cloud API)
+WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "https://gate.whapi.cloud")
+WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "yOkoAL9RE100MEcZHH4Bz3LvYJiTlcgg")
+WHATSAPP_CHANNEL_JID = os.getenv("WHATSAPP_CHANNEL_JID", "120363411468889929@newsletter")
 
 
 def load_cache():
@@ -515,25 +515,57 @@ def post_to_telegram(title, link, photocard_path=None):
     return False
 
 
-def post_to_whatsapp(title, link):
-    """হোয়াটসঅ্যাপ চ্যানেলে নতুন সংবাদ পুশ করে"""
+def post_to_whatsapp(title, link, photocard_path=None):
+    """হোয়াটসঅ্যাপ চ্যানেলে ফটোকার্ড ও সংবাদ পুশ করে (Whapi.cloud API)"""
     if not WHATSAPP_API_TOKEN or not WHATSAPP_CHANNEL_JID:
         return False
 
-    message = f"⚡ *ব্রেকিং নিউজ: {title}*\n\n🔗 বিস্তারিত পড়তে ক্লিক করুন:\n{link}\n\n📌 _ঘাটাইল ডট কম • বস্তুনিষ্ঠ সংবাদের বিশ্বস্ত ঠিকানা_"
+    caption = (
+        f"⚡ *{title}*\n\n"
+        f"🔗 বিস্তারিত পড়তে ক্লিক করুন:\n{link}\n\n"
+        f"📌 _ঘাটাইল ডট কম • বস্তুনিষ্ঠ সংবাদের বিশ্বস্ত ঠিকানা_"
+    )
+
+    base_url = WHATSAPP_API_URL.rstrip("/")
+    if base_url.endswith("/messages/text") or base_url.endswith("/messages/image"):
+        base_url = base_url.rsplit("/messages", 1)[0]
+
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_API_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
     try:
         import requests
-        headers = {
-            "Authorization": f"Bearer {WHATSAPP_API_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        payload = {"to": WHATSAPP_CHANNEL_JID, "body": message}
-        res = requests.post(WHATSAPP_API_URL, headers=headers, json=payload, timeout=15)
+        # ফটোকার্ড ইমেজ থাকলে বেস৬৪ এনকোড করে /messages/image এ পাঠাই
+        if photocard_path and os.path.exists(photocard_path):
+            import base64
+            with open(photocard_path, "rb") as img_f:
+                b64_data = base64.b64encode(img_f.read()).decode("utf-8")
+
+            payload = {
+                "to": WHATSAPP_CHANNEL_JID,
+                "media": f"data:image/png;base64,{b64_data}",
+                "caption": caption
+            }
+            img_url = f"{base_url}/messages/image"
+            res = requests.post(img_url, headers=headers, json=payload, timeout=30)
+            if res.status_code in (200, 201):
+                print("✅ হোয়াটসঅ্যাপ চ্যানেলে ফটোকার্ডসহ সফলভাবে পাঠানো হয়েছে!")
+                return True
+            else:
+                print(f"⚠️ হোয়াটসঅ্যাপে ইমেজ পোস্ট রেসপন্স কোড: {res.status_code}, টেক্সট ট্রাই করা হচ্ছে... {res.text[:150]}")
+
+        # ফটোকার্ড না থাকলে বা ইমেজ ফেইল করলে সাধারণ টেক্সট মেসেজ পাঠাই
+        text_url = f"{base_url}/messages/text"
+        res = requests.post(text_url, headers=headers, json={"to": WHATSAPP_CHANNEL_JID, "body": caption}, timeout=20)
         if res.status_code in (200, 201):
-            print("✅ হোয়াটসঅ্যাপ চ্যানেলে সফলভাবে পাঠানো হয়েছে!")
+            print("✅ হোয়াটসঅ্যাপ চ্যানেলে টেক্সট বার্তা সফলভাবে পাঠানো হয়েছে!")
             return True
+        else:
+            print(f"❌ হোয়াটসঅ্যাপে পাঠাতে ত্রুটি: {res.status_code} - {res.text[:200]}")
     except Exception as e:
-        print(f"হোয়াটসঅ্যাপে পাঠাতে ত্রুটি: {e}")
+        print(f"❌ হোয়াটসঅ্যাপে পাঠাতে ব্যতিক্রমি ত্রুটি: {e}")
     return False
 
 
@@ -563,7 +595,7 @@ def run_auto_publisher(force_latest=False):
         post_to_facebook(latest["title"], latest["link"], photocard_path)
         post_to_twitter(latest["title"], latest["link"])
         post_to_telegram(latest["title"], latest["link"], photocard_path)
-        post_to_whatsapp(latest["title"], latest["link"])
+        post_to_whatsapp(latest["title"], latest["link"], photocard_path)
         return
 
     # প্রথম রান হলে ক্যাশ প্রস্তুত করুন (ঐচ্ছিক: শেষ ১টি পোস্ট বাদে বাকিগুলো ক্যাশে রাখে)
@@ -599,7 +631,7 @@ def run_auto_publisher(force_latest=False):
         fb_ok = post_to_facebook(post["title"], post["link"], photocard_path)
         tw_ok = post_to_twitter(post["title"], post["link"])
         tg_ok = post_to_telegram(post["title"], post["link"], photocard_path)
-        wa_ok = post_to_whatsapp(post["title"], post["link"])
+        wa_ok = post_to_whatsapp(post["title"], post["link"], photocard_path)
 
         # ৩. ক্যাশে সংরক্ষণ
         cache.append(post["link"])
