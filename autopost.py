@@ -372,11 +372,10 @@ def post_to_facebook(title, link, photocard_path=None):
         print("⚠️ ফেসবুক পেজ ক্রেডেনশিয়াল পাওয়া যায়নি বা সেট করা হয়নি। স্কিপ করা হচ্ছে...")
         return False
 
+    # পোস্ট ক্যাপশন: শুধুমাত্র শিরোনাম এবং ফটোকার্ড (লিংক থাকবে ১ম কমেন্টে, যা ফেসবুক অ্যালগরিদমে সর্বোচ্চ রিচ দেয়)
     message = (
-        f"🔗 বিস্তারিত সংবাদ পড়তে ক্লিক করুন:\n{link}\n\n"
-        f"ব্রেকিং নিউজ: {title}\n\n"
-        f"📢 আমাদের অফিসিয়াল হোয়াটসঅ্যাপ চ্যানেলে যুক্ত থাকুন:\nhttps://whatsapp.com/channel/0029Vb4vGKFLCoX9YN0gVo1C\n\n"
-        f"#Ghatail #ঘাটাইল #টাঙ্গাইল #BreakingNews"
+        f"{title}\n\n"
+        f"#Ghatail #ঘাটাইল #টাঙ্গাইল"
     )
 
     try:
