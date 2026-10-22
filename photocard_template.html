@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@600;700;800&family=Noto+Sans+Bengali:wght@600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@600;700;800&family=Hind+Siliguri:wght@600;700;800&family=Noto+Sans+Bengali:wght@600;700;800;900&family=Tiro+Bangla:ital@0;1&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     width: 1200px;
@@ -89,6 +89,16 @@
     font-weight: 600;
     color: #475569;
   }
+  .meta-date {
+    font-family: 'Anek Bangla', 'Tiro Bangla', sans-serif;
+    font-weight: 700;
+    font-size: 23px;
+    color: #1e293b;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.3px;
+  }
   .meta-center { color: #0f172a; font-weight: 700; }
   .meta-right { color: #2563eb; font-weight: 700; }
   .ad-slot {
@@ -132,7 +142,7 @@
       <h1 class="headline">{{HEADLINE}}</h1>
     </div>
     <div class="meta-bar">
-      <span>🗓️ {{DATE}}</span>
+      <span class="meta-date">🗓️ {{DATE}}</span>
       <span class="meta-center">«« বিস্তারিত কমেন্টে »»</span>
       <span class="meta-right">🌐 ghatail.com</span>
     </div>
