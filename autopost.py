@@ -11,6 +11,7 @@ import sys
 import re
 import json
 import time
+import random
 import base64
 import html
 import shutil
@@ -42,9 +43,49 @@ DEFAULT_LOGO_PATH = os.path.join(PROJECT_DIR, "logo.png")
 if not os.path.exists(DEFAULT_LOGO_PATH):
     DEFAULT_LOGO_PATH = os.path.join(SCRIPT_DIR, "logo.png")
 
-DEFAULT_AD_PATH = os.path.join(PROJECT_DIR, "Ghatail Online 20 Mbps Offer Ads.jpg")
-if not os.path.exists(DEFAULT_AD_PATH):
-    DEFAULT_AD_PATH = os.path.join(SCRIPT_DIR, "Ghatail Online 20 Mbps Offer Ads.jpg")
+# র্যান্ডম বিজ্ঞাপন ব্যানার পুল (Ad Banner Pool)
+AD_BANNER_FILES = [
+    "Ghatail Online 20 Mbps Offer Ads.jpg",
+    "Ghatail-Online-Ad-Bnner.jpeg",
+    "Ghatail Online 20 Mbps Offer Ads.png"
+]
+
+AD_BANNER_ONLINE_URLS = [
+    "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEimaenH2aj-RtLCKo-RubVCjWh_vEedA9vZRclZeKB3Wt5IyTlFOWcNTU3F2D8-0mW-Mkcz8RQSMpP8iyT2pFfHUNINVFB3u0izh22loHe4vy_4rbHpWH_L6klsKyyacb-IM_i1h0SQZ-M2Ke37fvfwPnF-3pm_Ljm8scXUD2u4N1E203L4JJhifkLttpA/s1600/Ghatail-Online-Ad-Bnner.jpeg"
+]
+
+def get_random_ad_banner(exclude_url=None):
+    """
+    ফটোকার্ডের তলদেশের বিজ্ঞাপনের জন্য র্যান্ডম ব্যানার নির্বাচন করে।
+    নিউজ ফিচারড ইমেজ যেন বিজ্ঞাপনে না আসে তা ১০০% নিশ্চিত করে।
+    """
+    pool = []
+    # লোকাল ফাইল থেকে ব্যানার যোগ
+    for fname in AD_BANNER_FILES:
+        for base_dir in [SCRIPT_DIR, PROJECT_DIR]:
+            fpath = os.path.join(base_dir, fname)
+            if os.path.exists(fpath) and fpath not in pool:
+                pool.append(fpath)
+
+    # অনলাইন সিডিএন ব্যানার ব্যাকআপ
+    for url in AD_BANNER_ONLINE_URLS:
+        if url not in pool:
+            pool.append(url)
+
+    # নিউজ ইমেজের সাথে মিল থাকলে বাদ দেওয়া (যাতে ভুলেও নিউজের ছবি বিজ্ঞাপনে না আসে)
+    filtered = []
+    ex_base = os.path.basename(str(exclude_url).split("?")[0]) if exclude_url else ""
+    for ad in pool:
+        ad_base = os.path.basename(str(ad).split("?")[0])
+        if exclude_url and (ad == exclude_url or (ex_base and ex_base == ad_base)):
+            continue
+        filtered.append(ad)
+
+    if filtered:
+        chosen = random.choice(filtered)
+        print(f"🎯 [Ad Banner Selector] র্যান্ডম বিজ্ঞাপন ব্যানার নির্বাচিত: {os.path.basename(str(chosen))}")
+        return chosen
+    return pool[0] if pool else None
 
 # .env ফাইল থেকে লোকাল পরিবেশ ভেরিয়েবল লোড
 def _load_env():
@@ -167,9 +208,12 @@ def fetch_latest_posts():
                 sponsor_img = ""
                 m_sp = re.search(r'<img[^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])[^>]+src=["\']([^"\']+)["\']', desc)
                 if not m_sp:
-                    m_sp = re.search(r'<img[^>]+src=["\']([^"\']+)["\'][^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])', desc)
+                    m_sp = re.search(r'<img[^>]+src=["\'][^"\']+["\'][^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])', desc)
                 if m_sp:
-                    sponsor_img = m_sp.group(1)
+                    cand_sp = m_sp.group(1).strip()
+                    # স্পন্সর ব্যানার যেন মূল সংবাদের ছবির সমান না হয়
+                    if cand_sp and cand_sp != image_url:
+                        sponsor_img = cand_sp
 
                 items.append({
                     "title": title.strip(),
@@ -248,9 +292,12 @@ def generate_photocard_browser(title, image_url, output_path=None, pub_date="", 
         except Exception:
             pass
 
-    # ৩. বিজ্ঞাপন ব্যানার বেস৬৪-এ কনভার্ট
+    # ৩. বিজ্ঞাপন ব্যানার নির্বাচন ও বেস৬৪-এ কনভার্ট (র্যান্ডম ব্যানার পুল থেকে)
     ad_b64 = ""
-    ad_source = ad_banner_url or DEFAULT_AD_PATH
+    if not ad_banner_url or ad_banner_url == image_url:
+        ad_source = get_random_ad_banner(exclude_url=image_url)
+    else:
+        ad_source = ad_banner_url
     if ad_source:
         if os.path.exists(ad_source):
             try:
