@@ -51,8 +51,28 @@ AD_BANNER_FILES = [
 ]
 
 AD_BANNER_ONLINE_URLS = [
+    "https://raw.githubusercontent.com/DotProWeb/Gnews/main/Ghatail%20Online%2020%20Mbps%20Offer%20Ads.jpg",
+    "https://raw.githubusercontent.com/DotProWeb/Gnews/main/Ghatail-Online-Ad-Bnner.jpeg",
     "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEimaenH2aj-RtLCKo-RubVCjWh_vEedA9vZRclZeKB3Wt5IyTlFOWcNTU3F2D8-0mW-Mkcz8RQSMpP8iyT2pFfHUNINVFB3u0izh22loHe4vy_4rbHpWH_L6klsKyyacb-IM_i1h0SQZ-M2Ke37fvfwPnF-3pm_Ljm8scXUD2u4N1E203L4JJhifkLttpA/s1600/Ghatail-Online-Ad-Bnner.jpeg"
 ]
+
+def is_same_image(url1, url2):
+    """দুটি ইমেজ একই কিনা তা নির্ধারণ করে (Blogger URL ভ্যারিয়েশন হ্যান্ডেল করে)"""
+    if not url1 or not url2:
+        return False
+    u1 = str(url1).strip()
+    u2 = str(url2).strip()
+    if u1 == u2:
+        return True
+    u1_clean = re.sub(r'/(s[0-9]+(-c)?|w[0-9]+-h[0-9]+(-c)?)/', '/', u1.split("?")[0].split("#")[0])
+    u2_clean = re.sub(r'/(s[0-9]+(-c)?|w[0-9]+-h[0-9]+(-c)?)/', '/', u2.split("?")[0].split("#")[0])
+    if u1_clean == u2_clean:
+        return True
+    b1 = os.path.basename(u1_clean)
+    b2 = os.path.basename(u2_clean)
+    if b1 and b2 and b1 == b2 and len(b1) > 5:
+        return True
+    return False
 
 def get_random_ad_banner(exclude_url=None):
     """
@@ -74,10 +94,8 @@ def get_random_ad_banner(exclude_url=None):
 
     # নিউজ ইমেজের সাথে মিল থাকলে বাদ দেওয়া (যাতে ভুলেও নিউজের ছবি বিজ্ঞাপনে না আসে)
     filtered = []
-    ex_base = os.path.basename(str(exclude_url).split("?")[0]) if exclude_url else ""
     for ad in pool:
-        ad_base = os.path.basename(str(ad).split("?")[0])
-        if exclude_url and (ad == exclude_url or (ex_base and ex_base == ad_base)):
+        if exclude_url and is_same_image(ad, exclude_url):
             continue
         filtered.append(ad)
 
@@ -208,11 +226,11 @@ def fetch_latest_posts():
                 sponsor_img = ""
                 m_sp = re.search(r'<img[^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])[^>]+src=["\']([^"\']+)["\']', desc)
                 if not m_sp:
-                    m_sp = re.search(r'<img[^>]+src=["\'][^"\']+["\'][^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])', desc)
+                    m_sp = re.search(r'<img[^>]+src=["\']([^"\']+)["\'][^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])', desc)
                 if m_sp:
                     cand_sp = m_sp.group(1).strip()
                     # স্পন্সর ব্যানার যেন মূল সংবাদের ছবির সমান না হয়
-                    if cand_sp and cand_sp != image_url:
+                    if cand_sp and not is_same_image(cand_sp, image_url):
                         sponsor_img = cand_sp
 
                 items.append({
@@ -294,7 +312,7 @@ def generate_photocard_browser(title, image_url, output_path=None, pub_date="", 
 
     # ৩. বিজ্ঞাপন ব্যানার নির্বাচন ও বেস৬৪-এ কনভার্ট (র্যান্ডম ব্যানার পুল থেকে)
     ad_b64 = ""
-    if not ad_banner_url or ad_banner_url == image_url:
+    if not ad_banner_url or is_same_image(ad_banner_url, image_url):
         ad_source = get_random_ad_banner(exclude_url=image_url)
     else:
         ad_source = ad_banner_url
