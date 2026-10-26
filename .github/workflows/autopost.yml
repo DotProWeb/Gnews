@@ -2,12 +2,21 @@ name: Auto Publish News to Social Media
 
 on:
   schedule:
-    # প্রতি ১০ মিনিট পরপর ব্যাকগ্রাউন্ডে স্বয়ংক্রিয়ভাবে চলবে
-    - cron: '*/10 * * * *'
-  workflow_dispatch: # চাইলে ম্যানুয়ালি ১-ক্লিকে GitHub Actions থেকে রান করা যাবে
+    # প্রতি ৩০ মিনিট পর পর অফ-পিক মিনিটে (১৭ ও ৪৭) চলবে (গিটহাব কিউ বিলম্ব এড়াতে)
+    - cron: '17,47 * * * *'
+  workflow_dispatch: # ম্যানুয়ালি বা এক্সটার্নাল API দিয়ে তাৎক্ষণিক চালানোর জন্য
 
 permissions:
-  contents: write
+  contents: write   # Required: commit posted_cache.json back to repo
+  actions: none
+  checks: none
+  deployments: none
+  issues: none
+  packages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
 
 jobs:
   autopost:

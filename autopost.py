@@ -47,11 +47,8 @@ if not os.path.exists(DEFAULT_AD_PATH):
     DEFAULT_AD_PATH = os.path.join(SCRIPT_DIR, "Ghatail Online 20 Mbps Offer Ads.jpg")
 
 # ফেসবুক পেজ ক্রেডেনশিয়াল (GitHub Secrets বা পরিবেশ ভেরিয়েবল থেকে অগ্রাধিকার পাবে)
-FB_PAGE_ID = os.getenv("FB_PAGE_ID", "399463566750054")
-FB_PAGE_ACCESS_TOKEN = os.getenv(
-    "FB_PAGE_ACCESS_TOKEN",
-    "EAAWmZCyxD13YBS3teAB4hC4sR9db3oeFxiHno7dAqJLnhPD9b62JUvVyuKvWZAiPF1aGURkHcuOWo8OLjDWe4oLZBEqQgF3cGm00RhK31TPyCMNKxDKm2IQQ1Tgl2rVH4ZCXJkCD0nfoD24UWDd5sBvZBwY2ktsTMRycq6vJTXlo61gqitlHzHS32121krZBrZATZB7hC8ZB0er3riQIp4rHvyySR"
-)
+FB_PAGE_ID = os.getenv("FB_PAGE_ID")  # GitHub Secret: FB_PAGE_ID
+FB_PAGE_ACCESS_TOKEN = os.getenv("FB_PAGE_ACCESS_TOKEN")  # GitHub Secret: FB_PAGE_ACCESS_TOKEN
 
 # ৩. টেলিগ্রাম চ্যানেল ক্রেডেনশিয়াল (Optional)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -62,8 +59,8 @@ TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
 
 # ৫. হোয়াটসঅ্যাপ চ্যানেল ক্রেডেনশিয়াল (Whapi.cloud API)
 WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "https://gate.whapi.cloud")
-WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "yOkoAL9RE100MEcZHH4Bz3LvYJiTlcgg")
-WHATSAPP_CHANNEL_JID = os.getenv("WHATSAPP_CHANNEL_JID", "120363411468889929@newsletter")
+WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN")  # GitHub Secret: WHATSAPP_API_TOKEN
+WHATSAPP_CHANNEL_JID = os.getenv("WHATSAPP_CHANNEL_JID")  # GitHub Secret: WHATSAPP_CHANNEL_JID
 
 
 def load_cache():
@@ -274,14 +271,14 @@ def generate_photocard_browser(title, image_url, output_path=None, pub_date="", 
             "--no-sandbox",
             "--disable-dev-shm-usage",
             "--hide-scrollbars",
-            "--window-size=1200,960",
+            "--window-size=1080,1080",
             f"--screenshot={os.path.abspath(output_path)}",
             temp_html
         ]
 
         subprocess.run(cmd, check=True, timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
-            print(f"✅ [Browser Engine] ১২০০x৯৬০ ফটোকার্ড সফলভাবে তৈরি হয়েছে: {output_path} ({os.path.getsize(output_path)} bytes)")
+            print(f"✅ [Browser Engine] ১০৮০x১০৮০ ফটোকার্ড সফলভাবে তৈরি হয়েছে: {output_path} ({os.path.getsize(output_path)} bytes)")
             return output_path
     except Exception as e:
         print(f"❌ ব্রাউজার রেন্ডারিং ব্যর্থ: {e}")
@@ -300,7 +297,7 @@ def generate_photocard_pillow(title, image_url, output_path=None, pub_date=""):
     """
     try:
         from PIL import Image, ImageDraw, ImageFont
-        width, height = 1200, 960
+        width, height = 1080, 1080
 
         base = None
         if image_url:
@@ -322,6 +319,9 @@ def generate_photocard_pillow(title, image_url, output_path=None, pub_date=""):
         draw = ImageDraw.Draw(canvas)
 
         font_candidates = [
+            os.path.join(SCRIPT_DIR, "HindSiliguri-Bold.ttf"),
+            "C:/Windows/Fonts/HindSiliguri-Bold.ttf",
+            "C:/Windows/Fonts/HindSiliguri-SemiBold.ttf",
             os.path.join(SCRIPT_DIR, "kalpurush.ttf"),
             "C:/Windows/Fonts/kalpurush.ttf",
             "C:/Windows/Fonts/Nirmala.ttc",
@@ -332,9 +332,9 @@ def generate_photocard_pillow(title, image_url, output_path=None, pub_date=""):
         title_font = ImageFont.truetype(font_path, 40) if font_path else ImageFont.load_default()
 
         # শিরোনাম ড্র
-        draw.text((60, 640), title[:70], font=title_font, fill=(185, 28, 28))
+        draw.text((60, 680), title[:70], font=title_font, fill=(185, 28, 28))
         if len(title) > 70:
-            draw.text((60, 700), title[70:140], font=title_font, fill=(185, 28, 28))
+            draw.text((60, 740), title[70:140], font=title_font, fill=(185, 28, 28))
 
         # ফুটার বার
         draw.rectangle([(0, height - 70), (width, height)], fill=(15, 23, 42))
@@ -343,7 +343,7 @@ def generate_photocard_pillow(title, image_url, output_path=None, pub_date=""):
         if not output_path:
             output_path = os.path.join(SCRIPT_DIR, "last_photocard.png")
         canvas.save(output_path, "PNG")
-        print(f"✅ [Pillow Fallback] ফটোকার্ড তৈরি হয়েছে: {output_path}")
+        print(f"✅ [Pillow Fallback] ১০৮০x১০৮০ ফটোকার্ড তৈরি হয়েছে: {output_path}")
         return output_path
     except Exception as e:
         print(f"❌ পিলো ফলব্যাকেও ত্রুটি: {e}")
