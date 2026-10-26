@@ -11,6 +11,7 @@ import sys
 import re
 import json
 import time
+import random
 import base64
 import html
 import shutil
@@ -42,13 +43,93 @@ DEFAULT_LOGO_PATH = os.path.join(PROJECT_DIR, "logo.png")
 if not os.path.exists(DEFAULT_LOGO_PATH):
     DEFAULT_LOGO_PATH = os.path.join(SCRIPT_DIR, "logo.png")
 
-DEFAULT_AD_PATH = os.path.join(PROJECT_DIR, "Ghatail Online 20 Mbps Offer Ads.jpg")
-if not os.path.exists(DEFAULT_AD_PATH):
-    DEFAULT_AD_PATH = os.path.join(SCRIPT_DIR, "Ghatail Online 20 Mbps Offer Ads.jpg")
+# র্যান্ডম বিজ্ঞাপন ব্যানার পুল (Ad Banner Pool)
+AD_BANNER_FILES = [
+    "Ghatail Online 20 Mbps Offer Ads.jpg",
+    "Ghatail-Online-Ad-Bnner.jpeg",
+    "Ghatail Online 20 Mbps Offer Ads.png"
+]
+
+AD_BANNER_ONLINE_URLS = [
+    "https://raw.githubusercontent.com/DotProWeb/Gnews/main/Ghatail%20Online%2020%20Mbps%20Offer%20Ads.jpg",
+    "https://raw.githubusercontent.com/DotProWeb/Gnews/main/Ghatail-Online-Ad-Bnner.jpeg",
+    "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEimaenH2aj-RtLCKo-RubVCjWh_vEedA9vZRclZeKB3Wt5IyTlFOWcNTU3F2D8-0mW-Mkcz8RQSMpP8iyT2pFfHUNINVFB3u0izh22loHe4vy_4rbHpWH_L6klsKyyacb-IM_i1h0SQZ-M2Ke37fvfwPnF-3pm_Ljm8scXUD2u4N1E203L4JJhifkLttpA/s1600/Ghatail-Online-Ad-Bnner.jpeg"
+]
+
+def is_same_image(url1, url2):
+    """দুটি ইমেজ একই কিনা তা নির্ধারণ করে (Blogger URL ভ্যারিয়েশন হ্যান্ডেল করে)"""
+    if not url1 or not url2:
+        return False
+    u1 = str(url1).strip()
+    u2 = str(url2).strip()
+    if u1 == u2:
+        return True
+    u1_clean = re.sub(r'/(s[0-9]+(-c)?|w[0-9]+-h[0-9]+(-c)?)/', '/', u1.split("?")[0].split("#")[0])
+    u2_clean = re.sub(r'/(s[0-9]+(-c)?|w[0-9]+-h[0-9]+(-c)?)/', '/', u2.split("?")[0].split("#")[0])
+    if u1_clean == u2_clean:
+        return True
+    b1 = os.path.basename(u1_clean)
+    b2 = os.path.basename(u2_clean)
+    if b1 and b2 and b1 == b2 and len(b1) > 5:
+        return True
+    return False
+
+def get_random_ad_banner(exclude_url=None):
+    """
+    ফটোকার্ডের তলদেশের বিজ্ঞাপনের জন্য র্যান্ডম ব্যানার নির্বাচন করে।
+    নিউজ ফিচারড ইমেজ যেন বিজ্ঞাপনে না আসে তা ১০০% নিশ্চিত করে।
+    """
+    pool = []
+    # লোকাল ফাইল থেকে ব্যানার যোগ
+    for fname in AD_BANNER_FILES:
+        for base_dir in [SCRIPT_DIR, PROJECT_DIR]:
+            fpath = os.path.join(base_dir, fname)
+            if os.path.exists(fpath) and fpath not in pool:
+                pool.append(fpath)
+
+    # অনলাইন সিডিএন ব্যানার ব্যাকআপ
+    for url in AD_BANNER_ONLINE_URLS:
+        if url not in pool:
+            pool.append(url)
+
+    # নিউজ ইমেজের সাথে মিল থাকলে বাদ দেওয়া (যাতে ভুলেও নিউজের ছবি বিজ্ঞাপনে না আসে)
+    filtered = []
+    for ad in pool:
+        if exclude_url and is_same_image(ad, exclude_url):
+            continue
+        filtered.append(ad)
+
+    if filtered:
+        chosen = random.choice(filtered)
+        print(f"🎯 [Ad Banner Selector] র্যান্ডম বিজ্ঞাপন ব্যানার নির্বাচিত: {os.path.basename(str(chosen))}")
+        return chosen
+    return pool[0] if pool else None
+
+# .env ফাইল থেকে লোকাল পরিবেশ ভেরিয়েবল লোড
+def _load_env():
+    for p in [os.path.join(SCRIPT_DIR, ".env"), os.path.join(PROJECT_DIR, ".env")]:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k = k.strip()
+                            v = v.strip().strip("'\"")
+                            if k not in os.environ or not os.environ[k]:
+                                os.environ[k] = v
+            except Exception:
+                pass
+
+_load_env()
 
 # ফেসবুক পেজ ক্রেডেনশিয়াল (GitHub Secrets বা পরিবেশ ভেরিয়েবল থেকে অগ্রাধিকার পাবে)
-FB_PAGE_ID = os.getenv("FB_PAGE_ID")  # GitHub Secret: FB_PAGE_ID
-FB_PAGE_ACCESS_TOKEN = os.getenv("FB_PAGE_ACCESS_TOKEN")  # GitHub Secret: FB_PAGE_ACCESS_TOKEN
+FB_PAGE_ID = os.getenv("FB_PAGE_ID", "399463566750054")
+FB_PAGE_ACCESS_TOKEN = os.getenv(
+    "FB_PAGE_ACCESS_TOKEN",
+    "EAAWmZCyxD13YBS3teAB4hC4sR9db3oeFxiHno7dAqJLnhPD9b62JUvVyuKvWZAiPF1aGURkHcuOWo8OLjDWe4oLZBEqQgF3cGm00RhK31TPyCMNKxDKm2IQQ1Tgl2rVH4ZCXJkCD0nfoD24UWDd5sBvZBwY2ktsTMRycq6vJTXlo61gqitlHzHS32121krZBrZATZB7hC8ZB0er3riQIp4rHvyySR"
+)
 
 # ৩. টেলিগ্রাম চ্যানেল ক্রেডেনশিয়াল (Optional)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -59,8 +140,8 @@ TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
 
 # ৫. হোয়াটসঅ্যাপ চ্যানেল ক্রেডেনশিয়াল (Whapi.cloud API)
 WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "https://gate.whapi.cloud")
-WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN")  # GitHub Secret: WHATSAPP_API_TOKEN
-WHATSAPP_CHANNEL_JID = os.getenv("WHATSAPP_CHANNEL_JID")  # GitHub Secret: WHATSAPP_CHANNEL_JID
+WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "yOkoAL9RE100MEcZHH4Bz3LvYJiTlcgg")
+WHATSAPP_CHANNEL_JID = os.getenv("WHATSAPP_CHANNEL_JID", "120363411468889929@newsletter")
 
 
 def load_cache():
@@ -147,7 +228,10 @@ def fetch_latest_posts():
                 if not m_sp:
                     m_sp = re.search(r'<img[^>]+src=["\']([^"\']+)["\'][^>]+(?:class=["\'][^"\']*photocard-sponsor[^"\']*["\']|alt=["\'][^"\']*ফটোকার্ড স্পন্সর[^"\']*["\'])', desc)
                 if m_sp:
-                    sponsor_img = m_sp.group(1)
+                    cand_sp = m_sp.group(1).strip()
+                    # স্পন্সর ব্যানার যেন মূল সংবাদের ছবির সমান না হয়
+                    if cand_sp and not is_same_image(cand_sp, image_url):
+                        sponsor_img = cand_sp
 
                 items.append({
                     "title": title.strip(),
@@ -226,9 +310,12 @@ def generate_photocard_browser(title, image_url, output_path=None, pub_date="", 
         except Exception:
             pass
 
-    # ৩. বিজ্ঞাপন ব্যানার বেস৬৪-এ কনভার্ট
+    # ৩. বিজ্ঞাপন ব্যানার নির্বাচন ও বেস৬৪-এ কনভার্ট (র্যান্ডম ব্যানার পুল থেকে)
     ad_b64 = ""
-    ad_source = ad_banner_url or DEFAULT_AD_PATH
+    if not ad_banner_url or is_same_image(ad_banner_url, image_url):
+        ad_source = get_random_ad_banner(exclude_url=image_url)
+    else:
+        ad_source = ad_banner_url
     if ad_source:
         if os.path.exists(ad_source):
             try:
@@ -634,9 +721,12 @@ def run_auto_publisher(force_latest=False):
         tg_ok = post_to_telegram(post["title"], post["link"], photocard_path)
         wa_ok = post_to_whatsapp(post["title"], post["link"], photocard_path)
 
-        # ৩. ক্যাশে সংরক্ষণ
-        cache.append(post["link"])
-        save_cache(cache)
+        # ৩. ক্যাশে সংরক্ষণ (অন্তত একটি প্ল্যাটফর্মে পোস্ট সফল হলে তবেই ক্যাশ করব)
+        if fb_ok or wa_ok or tw_ok or tg_ok:
+            cache.append(post["link"])
+            save_cache(cache)
+        else:
+            print("⚠️ কোনো প্ল্যাটফর্মে পোস্ট সফল না হওয়ায় এই সংবাদ ক্যাশে যোগ করা হয়নি (পরের রানে পুনরায় চেষ্টা হবে)।")
         time.sleep(2)
 
 
